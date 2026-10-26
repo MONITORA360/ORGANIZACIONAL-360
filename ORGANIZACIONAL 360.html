@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero Interactivo de Evaluación de Desempeño</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#012169',
+                        danger: '#CA102E',
+                        neutralgray: '#A2A2A2',
+                        darkblue: '#0B172A'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(1, 33, 105, 0.08); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-primary text-white shadow-lg border-b-4 border-danger">
+        <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-3">
+                    <i class="fa-solid fa-chart-line text-danger"></i> Tablero Consolidado de Evaluación de Desempeño
+                </h1>
+                <p class="text-gray-200 text-sm mt-1">Simulación Ejecutiva y Toma de Decisiones - Escenario Consolidado Institucional</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center gap-3">
+                <span class="bg-white/10 text-white px-4 py-2 rounded-lg text-sm font-medium border border-white/20">
+                    <i class="fa-solid fa-users mr-2 text-danger"></i> <span id="total-evaluados">30</span> Evaluaciones
+                </span>
+                <button onclick="resetFilters()" class="bg-danger hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow">
+                    <i class="fa-solid fa-rotate-right"></i> Reiniciar Filtros
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-primary flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Promedio General Supervisor</p>
+                    <h3 class="text-3xl font-bold text-primary mt-1" id="kpi-promedio">0.0</h3>
+                    <p class="text-xs text-gray-400 mt-1">Escala de 0 a 100 puntos</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-danger flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Desempeño Crítico / Básico</p>
+                    <h3 class="text-3xl font-bold text-danger mt-1" id="kpi-criticos">0</h3>
+                    <p class="text-xs text-gray-400 mt-1">Requieren plan de acción</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center text-danger text-xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-emerald-600 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Satisfactorio / Sobresaliente</p>
+                    <h3 class="text-3xl font-bold text-emerald-600 mt-1" id="kpi-altos">0</h3>
+                    <p class="text-xs text-gray-400 mt-1">Cumplen o superan estándares</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-neutralgray flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Brecha Promedio (Auto vs Sup)</p>
+                    <h3 class="text-3xl font-bold text-gray-700 mt-1" id="kpi-brecha">0.0</h3>
+                    <p class="text-xs text-gray-400 mt-1">Puntos de diferencia global</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-xl">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="bg-white p-6 rounded-xl card-shadow">
+            <h2 class="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-filter text-danger"></i> Filtros de Análisis y Segmentación
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Área / Departamento</label>
+                    <select id="filter-area" onchange="filterData()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none">
+                        <option value="">Todas las Áreas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Ubicación – Sede</label>
+                    <select id="filter-sede" onchange="filterData()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none">
+                        <option value="">Todas las Sedes</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nivel de Desempeño</label>
+                    <select id="filter-nivel" onchange="filterData()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none">
+                        <option value="">Todos los Niveles</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Buscar Colaborador</label>
+                    <div class="relative">
+                        <input type="text" id="search-input" onkeyup="filterData()" placeholder="Nombre o cargo..." class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 pl-9 text-sm focus:ring-2 focus:ring-primary focus:outline-none">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-xl card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-primary text-base flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-danger"></i> Distribución por Nivel de Desempeño
+                    </h3>
+                    <span class="text-xs text-gray-400">Escala Global 0-100</span>
+                </div>
+                <div class="relative h-72 flex justify-center items-center">
+                    <canvas id="chartNiveles"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-primary text-base flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-danger"></i> Promedio por Criterio (Auto vs Supervisor)
+                    </h3>
+                    <span class="text-xs text-gray-400">Escala 0 - 5</span>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="chartCriterios"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-xl card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-primary text-base flex items-center gap-2">
+                        <i class="fa-solid fa-building text-danger"></i> Puntaje Promedio por Sede
+                    </h3>
+                    <span class="text-xs text-gray-400">Comparativa general</span>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="chartSedes"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-primary text-base flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-split-up-and-left text-danger"></i> Análisis de Brechas (Autoevaluación vs Supervisor)
+                    </h3>
+                    <span class="text-xs text-gray-400">Diferencia de puntaje</span>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="chartBrechas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-xl card-shadow overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="font-bold text-primary text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-danger"></i> Listado Consolidado de Evaluaciones
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Haga clic en "Ver Detalle" para explorar la evaluación pregunta por pregunta y su plan de acción.</p>
+                </div>
+                <div class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
+                    Mostrando <span id="count-shown">30</span> de <span id="count-total">30</span> registros
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-4">Colaborador</th>
+                            <th class="py-3 px-4">Cargo</th>
+                            <th class="py-3 px-4">Área</th>
+                            <th class="py-3 px-4">Sede</th>
+                            <th class="py-3 px-4 text-center">Auto (0-100)</th>
+                            <th class="py-3 px-4 text-center">Supervisor (0-100)</th>
+                            <th class="py-3 px-4 text-center">Brecha</th>
+                            <th class="py-3 px-4">Nivel de Desempeño</th>
+                            <th class="py-3 px-4 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-gray-200 text-sm text-gray-700">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reference Guide Section -->
+        <div class="bg-white p-6 rounded-xl card-shadow space-y-6">
+            <h3 class="font-bold text-primary text-lg flex items-center gap-2 border-b pb-3">
+                <i class="fa-solid fa-book-open text-danger"></i> Guía de Criterios, Escala Likert y Matriz de Interpretación (Referencia Oficial)
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-primary text-md mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-scale-balanced text-danger"></i> Escala de Calificación Likert (0 a 5)
+                    </h4>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li><strong>0 – Nunca / Deficiente:</strong> No realizo la acción o mi desempeño es prácticamente nulo.</li>
+                        <li><strong>1 – Casi nunca / Necesita mejorar:</strong> Realizo la actividad de forma esporádica o con bastantes inconsistencias.</li>
+                        <li><strong>2 – A veces / En desarrollo:</strong> Cumplo parcialmente, requiero apoyo o mayor disciplina.</li>
+                        <li><strong>3 – Frecuentemente / Bueno:</strong> Cumplo de manera constante y satisfactoria con los estándares.</li>
+                        <li><strong>4 – Casi siempre / Muy bueno:</strong> Supero habitualmente las expectativas, mostrando autonomía.</li>
+                        <li><strong>5 – Siempre / Sobresaliente:</strong> Desempeño impecable y constante; sirvo como referente.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-primary text-md mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-danger"></i> Matriz Consolidada de Puntuaje Global (0 - 100)
+                    </h4>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li><strong class="text-danger">0 – 50 puntos (Crítico / Deficiente):</strong> Plan de mejora intensivo a 30 días, auditoría clínica semanal.</li>
+                        <li><strong class="text-gray-600">51 – 74 puntos (Básico / En Desarrollo):</strong> Plan de acción a 60 días, refuerzo en liderazgo y comunicación.</li>
+                        <li><strong class="text-primary">75 – 89 puntos (Satisfactorio / Bueno):</strong> Desempeño técnico sólido, participación en guías médicas.</li>
+                        <li><strong class="text-emerald-600">90 – 100 puntos (Sobresaliente / Excelencia):</strong> Referente de excelencia, proyección hacia alta dirección.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-primary text-md mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-danger"></i> Las 5 Dimensiones de Evaluación (20 Preguntas Oficiales)
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="p-4 bg-gray-50 rounded-lg border">
+                        <span class="font-bold text-primary block mb-1">Criterio I</span>
+                        <p class="text-xs text-gray-600">Gestión Clínica, Atención Crítica y Protocolos en UCI (Preguntas 1 a 4)</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg border">
+                        <span class="font-bold text-primary block mb-1">Criterio II</span>
+                        <p class="text-xs text-gray-600">Comunicación, Clientes y Reportes Institucionales / SIVIGILA / QVET (Preguntas 5 a 7)</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg border">
+                        <span class="font-bold text-primary block mb-1">Criterio III</span>
+                        <p class="text-xs text-gray-600">Operaciones, Administración y Programación de Turnos (Preguntas 8 a 12)</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg border">
+                        <span class="font-bold text-primary block mb-1">Criterio IV</span>
+                        <p class="text-xs text-gray-600">Gobernanza, Gestión Presupuestal y Proveedores (Preguntas 13 a 16)</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg border md:col-span-2">
+                        <span class="font-bold text-primary block mb-1">Criterio V</span>
+                        <p class="text-xs text-gray-600">Bioseguridad, SST, SISOMA y Competencias Organizacionales (Preguntas 17 a 20)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal for Employee Detail -->
+    <div id="modal-detalle" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
+            <div class="flex justify-between items-start border-b pb-4">
+                <div>
+                    <span id="modal-badge-nivel" class="px-3 py-1 rounded-full text-xs font-bold uppercase"></span>
+                    <h2 id="modal-nombre" class="text-2xl font-bold text-primary mt-2"></h2>
+                    <p id="modal-cargo-area" class="text-sm text-gray-500"></p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-4 rounded-xl border text-center">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Puntaje Autoevaluación</p>
+                    <p id="modal-score-auto" class="text-3xl font-bold text-primary mt-1">0</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl border text-center">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Puntaje Supervisor</p>
+                    <p id="modal-score-sup" class="text-3xl font-bold text-danger mt-1">0</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl border text-center">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Brecha (Auto - Sup)</p>
+                    <p id="modal-brecha" class="text-3xl font-bold text-gray-700 mt-1">0</p>
+                </div>
+            </div>
+
+            <div class="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-2">
+                <h4 class="font-bold text-primary text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-stethoscope text-danger"></i> Diagnóstico e Intervención Recomendada
+                </h4>
+                <p id="modal-diagnostico" class="text-sm text-gray-700 leading-relaxed"></p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-primary text-md mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-danger"></i> Detalle de Calificación por Pregunta (Escala 0-5)
+                </h4>
+                <div class="overflow-x-auto border rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-100 text-gray-700 uppercase font-semibold border-b">
+                            <tr>
+                                <th class="p-3">#</th>
+                                <th class="p-3">Criterio / Enfoque</th>
+                                <th class="p-3 text-center">Auto</th>
+                                <th class="p-3 text-center">Supervisor</th>
+                                <th class="p-3">Interpretación Escala Supervisor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-questions-body" class="divide-y text-gray-700">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4 border-t">
+                <button onclick="closeModal()" class="bg-primary hover:bg-blue-900 text-white px-6 py-2.5 rounded-xl font-medium transition shadow">
+                    Cerrar Detalle
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Data and Logic -->
+    <script>
+        const employeesData = [{"id": 1, "nombre": "Dra. Marcela Gómez", "cargo": "Coordinador de Urgencias", "area": "UCI – Hospital", "sede": "CHICO", "scores_auto": [5, 4, 5, 4, 3, 4, 5, 4, 5, 5, 5, 4, 3, 2, 3, 5, 4, 2, 4, 4], "scores_sup": [5, 3, 4, 5, 2, 4, 4, 3, 5, 5, 5, 4, 3, 2, 3, 5, 3, 1, 4, 4], "total_auto": 80, "total_sup": 74, "promedio_sup": 74, "nivel": "Básico / En Desarrollo", "brecha": 6}, {"id": 2, "nombre": "Dr. Alejandro Ruiz", "cargo": "Coordinador de Hospital y Anestesia", "area": "UCI – Hospital", "sede": "CHICÓ NORTE", "scores_auto": [2, 5, 4, 4, 4, 5, 4, 4, 3, 4, 4, 5, 4, 4, 5, 4, 3, 5, 3, 3], "scores_sup": [1, 5, 4, 4, 3, 5, 4, 5, 4, 4, 4, 5, 3, 3, 5, 5, 2, 5, 3, 3], "total_auto": 79, "total_sup": 77, "promedio_sup": 77, "nivel": "Satisfactorio / Bueno", "brecha": 2}, {"id": 3, "nombre": "Dra. Sofía Herrera", "cargo": "Coordinador de Hospital y Anestesia", "area": "Cirugía y Monitoreo", "sede": "SUR", "scores_auto": [5, 4, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 2, 4, 2, 4, 3, 3], "scores_sup": [4, 4, 5, 4, 3, 4, 5, 5, 5, 4, 3, 3, 2, 4, 1, 5, 1, 3, 2, 2], "total_auto": 75, "total_sup": 69, "promedio_sup": 69, "nivel": "Básico / En Desarrollo", "brecha": 6}, {"id": 4, "nombre": "Dr. Camilo Torres", "cargo": "Coordinador de Hospital y Anestesia", "area": "Hospitalización General", "sede": "SUR", "scores_auto": [3, 4, 3, 5, 5, 3, 4, 4, 4, 5, 4, 4, 4, 3, 3, 4, 4, 4, 4, 4], "scores_sup": [4, 5, 3, 5, 4, 2, 4, 4, 3, 4, 4, 3, 4, 3, 3, 3, 5, 3, 4, 3], "total_auto": 78, "total_sup": 73, "promedio_sup": 73, "nivel": "Básico / En Desarrollo", "brecha": 5}, {"id": 5, "nombre": "Dra. Andrea Morales", "cargo": "Supervisor de Sala UCI", "area": "Urgencias Veterinarias", "sede": "SUR", "scores_auto": [5, 5, 2, 4, 4, 5, 4, 3, 5, 4, 3, 3, 4, 4, 5, 3, 5, 4, 4, 5], "scores_sup": [4, 5, 2, 3, 3, 5, 4, 2, 5, 4, 2, 3, 3, 3, 5, 4, 4, 3, 5, 5], "total_auto": 81, "total_sup": 74, "promedio_sup": 74, "nivel": "Básico / En Desarrollo", "brecha": 7}, {"id": 6, "nombre": "Dr. Felipe Vargas", "cargo": "Coordinador de Hospital y Anestesia", "area": "Cirugía y Monitoreo", "sede": "NORTE", "scores_auto": [4, 4, 2, 3, 3, 4, 5, 5, 4, 2, 3, 5, 4, 4, 5, 4, 4, 4, 5, 3], "scores_sup": [5, 5, 3, 2, 4, 3, 5, 4, 4, 2, 4, 4, 3, 3, 4, 4, 5, 5, 5, 3], "total_auto": 77, "total_sup": 77, "promedio_sup": 77, "nivel": "Satisfactorio / Bueno", "brecha": 0}, {"id": 7, "nombre": "Dra. Valentina Castro", "cargo": "Supervisor de Sala UCI", "area": "Cirugía y Monitoreo", "sede": "CHICO", "scores_auto": [3, 3, 5, 4, 3, 3, 5, 4, 3, 4, 5, 3, 4, 4, 4, 2, 4, 4, 3, 4], "scores_sup": [4, 4, 5, 4, 3, 2, 4, 3, 2, 3, 5, 2, 4, 3, 4, 1, 4, 3, 2, 5], "total_auto": 74, "total_sup": 67, "promedio_sup": 67, "nivel": "Básico / En Desarrollo", "brecha": 7}, {"id": 8, "nombre": "Dr. Daniel Rojas", "cargo": "Médico Veterinario Intensivista", "area": "Hospitalización General", "sede": "SUR", "scores_auto": [4, 3, 4, 4, 4, 4, 4, 4, 5, 3, 4, 5, 3, 4, 3, 5, 5, 4, 3, 4], "scores_sup": [4, 4, 4, 4, 3, 3, 3, 3, 4, 3, 3, 5, 3, 3, 2, 4, 5, 4, 2, 3], "total_auto": 79, "total_sup": 69, "promedio_sup": 69, "nivel": "Básico / En Desarrollo", "brecha": 10}, {"id": 9, "nombre": "Dra. Lucía Mendoza", "cargo": "Coordinador de Urgencias", "area": "Urgencias Veterinarias", "sede": "SUR", "scores_auto": [4, 4, 3, 4, 3, 2, 3, 4, 3, 4, 2, 3, 4, 5, 4, 5, 2, 3, 4, 4], "scores_sup": [4, 4, 2, 4, 2, 2, 2, 4, 3, 3, 1, 2, 4, 4, 3, 5, 2, 3, 3, 4], "total_auto": 70, "total_sup": 61, "promedio_sup": 61, "nivel": "Básico / En Desarrollo", "brecha": 9}, {"id": 10, "nombre": "Dr. Mateo Jiménez", "cargo": "Coordinador de Urgencias", "area": "Urgencias Veterinarias", "sede": "CHICO", "scores_auto": [5, 4, 5, 4, 3, 4, 5, 4, 2, 4, 5, 4, 5, 3, 2, 3, 3, 5, 5, 3], "scores_sup": [5, 4, 5, 5, 3, 5, 5, 3, 1, 4, 5, 4, 5, 3, 2, 2, 3, 5, 5, 2], "total_auto": 78, "total_sup": 76, "promedio_sup": 76, "nivel": "Satisfactorio / Bueno", "brecha": 2}, {"id": 11, "nombre": "Dra. Paula Ramírez", "cargo": "Coordinador de Urgencias", "area": "Hospitalización General", "sede": "NORTE", "scores_auto": [3, 4, 4, 2, 5, 2, 5, 3, 3, 5, 4, 4, 4, 4, 5, 2, 2, 5, 5, 2], "scores_sup": [2, 5, 4, 1, 4, 1, 5, 4, 2, 5, 5, 4, 4, 4, 5, 2, 2, 5, 5, 2], "total_auto": 73, "total_sup": 71, "promedio_sup": 71, "nivel": "Básico / En Desarrollo", "brecha": 2}, {"id": 12, "nombre": "Dr. Santiago Ortiz", "cargo": "Coordinador de Hospital y Anestesia", "area": "Hospitalización General", "sede": "CHICÓ NORTE", "scores_auto": [3, 5, 4, 4, 4, 5, 4, 4, 5, 4, 5, 5, 4, 3, 4, 4, 2, 5, 4, 5], "scores_sup": [3, 5, 3, 5, 5, 4, 4, 4, 4, 3, 5, 5, 3, 3, 3, 5, 1, 5, 5, 5], "total_auto": 83, "total_sup": 80, "promedio_sup": 80, "nivel": "Satisfactorio / Bueno", "brecha": 3}, {"id": 13, "nombre": "Dra. Jimena Paredes", "cargo": "Supervisor de Sala UCI", "area": "UCI – Hospital", "sede": "CHICO", "scores_auto": [5, 5, 3, 5, 4, 4, 5, 4, 4, 2, 4, 4, 3, 3, 4, 3, 4, 5, 4, 5], "scores_sup": [5, 5, 2, 4, 4, 3, 4, 5, 3, 1, 4, 5, 3, 2, 4, 4, 4, 5, 4, 4], "total_auto": 80, "total_sup": 75, "promedio_sup": 75, "nivel": "Satisfactorio / Bueno", "brecha": 5}, {"id": 14, "nombre": "Dr. Esteban Silva", "cargo": "Médico Veterinario Intensivista", "area": "Urgencias Veterinarias", "sede": "NORTE", "scores_auto": [2, 5, 2, 4, 4, 3, 2, 4, 4, 4, 4, 2, 5, 4, 4, 3, 4, 2, 2, 4], "scores_sup": [2, 4, 3, 3, 5, 3, 3, 3, 5, 3, 4, 3, 4, 4, 4, 4, 3, 2, 2, 4], "total_auto": 68, "total_sup": 68, "promedio_sup": 68, "nivel": "Básico / En Desarrollo", "brecha": 0}, {"id": 15, "nombre": "Dra. Natalia Ríos", "cargo": "Coordinador de Hospital y Anestesia", "area": "UCI – Hospital", "sede": "CHICÓ NORTE", "scores_auto": [4, 4, 4, 3, 4, 4, 4, 3, 3, 4, 5, 4, 4, 3, 5, 4, 5, 4, 4, 4], "scores_sup": [5, 5, 3, 4, 4, 4, 5, 4, 2, 3, 4, 4, 3, 3, 4, 4, 5, 3, 4, 4], "total_auto": 79, "total_sup": 77, "promedio_sup": 77, "nivel": "Satisfactorio / Bueno", "brecha": 2}, {"id": 16, "nombre": "Dr. Ricardo Navas", "cargo": "Coordinador de Hospital y Anestesia", "area": "Hospitalización General", "sede": "NORTE", "scores_auto": [4, 4, 3, 4, 2, 4, 5, 3, 4, 3, 5, 4, 5, 3, 4, 2, 4, 2, 5, 4], "scores_sup": [4, 3, 3, 5, 2, 3, 4, 2, 3, 3, 5, 3, 5, 4, 3, 2, 4, 2, 5, 3], "total_auto": 74, "total_sup": 68, "promedio_sup": 68, "nivel": "Básico / En Desarrollo", "brecha": 6}, {"id": 17, "nombre": "Dra. Claudia Benítez", "cargo": "Supervisor de Sala UCI", "area": "Cirugía y Monitoreo", "sede": "CHICÓ NORTE", "scores_auto": [4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 3, 3, 3, 3, 5, 5, 4, 5, 4, 3], "scores_sup": [4, 4, 4, 4, 3, 5, 3, 4, 5, 5, 3, 2, 2, 2, 4, 5, 3, 5, 5, 2], "total_auto": 79, "total_sup": 74, "promedio_sup": 74, "nivel": "Básico / En Desarrollo", "brecha": 5}, {"id": 18, "nombre": "Dr. Gabriel Soto", "cargo": "Supervisor de Sala UCI", "area": "Hospitalización General", "sede": "NORTE", "scores_auto": [5, 4, 4, 5, 2, 4, 4, 3, 5, 5, 4, 4, 5, 3, 5, 3, 5, 5, 4, 3], "scores_sup": [5, 4, 3, 5, 1, 4, 4, 3, 4, 5, 3, 4, 5, 2, 4, 2, 5, 5, 4, 2], "total_auto": 82, "total_sup": 74, "promedio_sup": 74, "nivel": "Básico / En Desarrollo", "brecha": 8}, {"id": 19, "nombre": "Dra. Diana Medina", "cargo": "Coordinador de Hospital y Anestesia", "area": "Urgencias Veterinarias", "sede": "SUR", "scores_auto": [3, 3, 4, 3, 3, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 5, 2], "scores_sup": [2, 3, 3, 2, 4, 5, 4, 3, 3, 5, 3, 3, 4, 4, 4, 3, 1, 3, 4, 3], "total_auto": 72, "total_sup": 66, "promedio_sup": 66, "nivel": "Básico / En Desarrollo", "brecha": 6}, {"id": 20, "nombre": "Dr. Jorge Cárdenas", "cargo": "Supervisor de Sala UCI", "area": "Cirugía y Monitoreo", "sede": "SUR", "scores_auto": [3, 4, 4, 5, 3, 4, 4, 4, 3, 4, 4, 3, 3, 4, 5, 4, 2, 5, 4, 4], "scores_sup": [2, 3, 3, 5, 2, 4, 3, 4, 4, 3, 4, 3, 3, 3, 5, 4, 1, 5, 4, 3], "total_auto": 76, "total_sup": 68, "promedio_sup": 68, "nivel": "Básico / En Desarrollo", "brecha": 8}, {"id": 21, "nombre": "Dra. Adriana Londoño", "cargo": "Coordinador de Urgencias", "area": "UCI – Hospital", "sede": "NORTE", "scores_auto": [4, 3, 4, 3, 3, 5, 4, 4, 2, 4, 3, 5, 4, 3, 3, 4, 4, 4, 2, 4], "scores_sup": [3, 4, 5, 4, 2, 5, 3, 3, 2, 4, 2, 4, 3, 2, 3, 3, 4, 3, 3, 5], "total_auto": 72, "total_sup": 67, "promedio_sup": 67, "nivel": "Básico / En Desarrollo", "brecha": 5}, {"id": 22, "nombre": "Dr. Mauricio Pardo", "cargo": "Coordinador de Urgencias", "area": "Hospitalización General", "sede": "CHICÓ NORTE", "scores_auto": [4, 4, 2, 3, 5, 4, 4, 4, 2, 3, 4, 3, 5, 4, 4, 5, 5, 3, 4, 3], "scores_sup": [3, 4, 3, 4, 4, 3, 4, 3, 1, 2, 5, 3, 5, 5, 3, 5, 5, 4, 3, 2], "total_auto": 75, "total_sup": 71, "promedio_sup": 71, "nivel": "Básico / En Desarrollo", "brecha": 4}, {"id": 23, "nombre": "Dra. Carolina Acuña", "cargo": "Coordinador de Urgencias", "area": "Urgencias Veterinarias", "sede": "NORTE", "scores_auto": [5, 5, 4, 4, 4, 4, 5, 2, 4, 4, 4, 5, 5, 4, 2, 5, 3, 3, 4, 4], "scores_sup": [4, 5, 4, 5, 4, 4, 5, 3, 4, 3, 5, 4, 5, 4, 2, 5, 3, 2, 5, 5], "total_auto": 80, "total_sup": 81, "promedio_sup": 81, "nivel": "Satisfactorio / Bueno", "brecha": -1}, {"id": 24, "nombre": "Dr. Julián Guerrero", "cargo": "Coordinador de Urgencias", "area": "Cirugía y Monitoreo", "sede": "SUR", "scores_auto": [5, 2, 4, 5, 2, 2, 4, 2, 4, 3, 5, 4, 4, 5, 3, 2, 4, 3, 4, 4], "scores_sup": [4, 3, 4, 4, 2, 1, 5, 3, 5, 3, 4, 3, 3, 5, 3, 2, 5, 3, 5, 4], "total_auto": 71, "total_sup": 71, "promedio_sup": 71, "nivel": "Básico / En Desarrollo", "brecha": 0}, {"id": 25, "nombre": "Dra. Mónica Echeverry", "cargo": "Supervisor de Sala UCI", "area": "Cirugía y Monitoreo", "sede": "SUR", "scores_auto": [5, 4, 5, 5, 2, 4, 4, 3, 4, 3, 4, 4, 5, 4, 4, 4, 2, 5, 4, 5], "scores_sup": [4, 3, 5, 4, 1, 5, 4, 2, 3, 3, 5, 4, 5, 4, 4, 3, 1, 5, 4, 5], "total_auto": 80, "total_sup": 74, "promedio_sup": 74, "nivel": "Básico / En Desarrollo", "brecha": 6}, {"id": 26, "nombre": "Dr. Fernando Restrepo", "cargo": "Coordinador de Urgencias", "area": "Hospitalización General", "sede": "CHICÓ NORTE", "scores_auto": [3, 3, 4, 4, 4, 2, 4, 5, 4, 5, 4, 4, 3, 2, 3, 3, 4, 5, 4, 5], "scores_sup": [4, 2, 3, 4, 4, 2, 4, 5, 3, 5, 4, 4, 2, 2, 2, 2, 4, 4, 4, 4], "total_auto": 75, "total_sup": 68, "promedio_sup": 68, "nivel": "Básico / En Desarrollo", "brecha": 7}, {"id": 27, "nombre": "Dra. Tatiana Orozco", "cargo": "Coordinador de Hospital y Anestesia", "area": "Hospitalización General", "sede": "NORTE", "scores_auto": [3, 4, 4, 4, 3, 2, 5, 5, 5, 3, 3, 3, 4, 4, 5, 5, 4, 3, 5, 4], "scores_sup": [3, 3, 4, 3, 3, 2, 5, 5, 4, 3, 4, 3, 5, 4, 5, 5, 5, 3, 4, 4], "total_auto": 78, "total_sup": 77, "promedio_sup": 77, "nivel": "Satisfactorio / Bueno", "brecha": 1}, {"id": 28, "nombre": "Dr. Andrés Rincón", "cargo": "Supervisor de Sala UCI", "area": "Hospitalización General", "sede": "OCCIDENTE", "scores_auto": [4, 5, 3, 5, 4, 4, 3, 4, 3, 3, 4, 5, 4, 4, 5, 4, 2, 4, 2, 3], "scores_sup": [3, 5, 2, 5, 4, 5, 4, 4, 2, 4, 3, 4, 5, 4, 5, 4, 1, 3, 2, 3], "total_auto": 75, "total_sup": 72, "promedio_sup": 72, "nivel": "Básico / En Desarrollo", "brecha": 3}, {"id": 29, "nombre": "Dra. Laura Zapata", "cargo": "Supervisor de Sala UCI", "area": "Urgencias Veterinarias", "sede": "CHICÓ NORTE", "scores_auto": [5, 4, 5, 3, 3, 4, 4, 4, 3, 5, 4, 4, 5, 5, 4, 4, 3, 4, 3, 4], "scores_sup": [5, 4, 5, 4, 3, 5, 4, 3, 3, 5, 4, 3, 4, 5, 4, 3, 3, 3, 3, 3], "total_auto": 80, "total_sup": 76, "promedio_sup": 76, "nivel": "Satisfactorio / Bueno", "brecha": 4}, {"id": 30, "nombre": "Dr. Carlos Buitrago", "cargo": "Coordinador de Urgencias", "area": "Urgencias Veterinarias", "sede": "CHICO", "scores_auto": [5, 4, 4, 3, 2, 4, 4, 4, 4, 4, 5, 3, 3, 3, 4, 2, 4, 4, 4, 4], "scores_sup": [4, 3, 4, 3, 1, 3, 5, 3, 3, 3, 4, 2, 4, 2, 5, 1, 5, 3, 3, 3], "total_auto": 74, "total_sup": 64, "promedio_sup": 64, "nivel": "Básico / En Desarrollo", "brecha": 10}];
+        const questionsData = [{"id": 1, "criterio": "Criterio I: Dimensiones de Gestión Clínica, Atención Crítica y Protocolos en UCI", "enfoque": "1. Liderazgo y Coordinación de Equipos en UCI y Hospitalización", "pregunta_auto": "¿Dirijo y coordino al equipo veterinario y asistencial en UCI y hospitalización, asegurando la calidad del cuidado y la ejecución estricta de protocolos?", "pregunta_sup": "¿El colaborador lidera eficazmente al personal de UCI y hospitalización, garantizando estándares superiores en la atención médica crítica?", "interp_bajo": "Falta de supervisión operativa en salas críticas o descoordinación entre el equipo médico y de soporte. ", "interp_alto": "Liderazgo efectivo que asegura la continuidad y excelencia asistencial en pacientes internados."}, {"id": 2, "criterio": "Criterio I: Dimensiones de Gestión Clínica, Atención Crítica y Protocolos en UCI", "enfoque": "2. Desarrollo, Implementación y Actualización de Protocolos Críticos", "pregunta_auto": "¿Desarrollo y actualizo los protocolos de atención crítica y hospitalaria para garantizar la recuperación óptima de los pacientes?", "pregunta_sup": "¿Promueve la estandarización y actualización de las guías de manejo para cuidados intensivos y urgencias hospitalarias?", "interp_bajo": "Omite actualizar los protocolos clínicos de UCI o permite prácticas desestandarizadas.", "interp_alto": "Implementación rigurosa de protocolos actualizados de medicina crítica."}, {"id": 3, "criterio": "Criterio I: Dimensiones de Gestión Clínica, Atención Crítica y Protocolos en UCI", "enfoque": "3. Seguimiento Continuo y Decisiones Clínicas Críticas", "pregunta_auto": "¿Realizo monitoreo continuo a pacientes en UCI, ajustando los planes terapéuticos y tomando decisiones clínicas fundamentadas?", "pregunta_sup": "¿Demuestra alto criterio médico para evaluar la evolución de pacientes críticos y ajustar tratamientos oportunamente?", "interp_bajo": "Retrasos en la detección de complicaciones en UCI o ajustes extemporáneos del plan terapéutico.", "interp_alto": "Monitoreo constante de parámetros críticos y decisiones médicas oportunas."}, {"id": 4, "criterio": "Criterio I: Dimensiones de Gestión Clínica, Atención Crítica y Protocolos en UCI", "enfoque": "4. Operación de Equipos de Anestesia, Monitoreo y Recursos Médicos", "pregunta_auto": "¿Administro y velo por el correcto uso y funcionamiento de los equipos de anestesia, monitoreo e insumos de cuidados intensivos?", "pregunta_sup": "¿Garantiza la disponibilidad, calibración y conservación óptima de la aparatología médica en UCI y hospital?", "interp_bajo": "Equipos de monitoreo desatendidos o desabastecimiento de insumos críticos por falta de control.", "interp_alto": "Gestión impecable de tecnología médica y recursos de soporte vital."}, {"id": 5, "criterio": "Criterio II: Dimensiones de Comunicación, Clientes y Reportes Institucionales", "enfoque": "5. Comunicación Transparente y Empática con Propietarios", "pregunta_auto": "¿Mantengo comunicación clara y regular con los tutores de mascotas hospitalizadas, informando sobre su estado, pronóstico y costos?", "pregunta_sup": "¿Informa a los propietarios con empatía, profesionalismo y claridad sobre el avance clínico y opciones de tratamiento en UCI?", "interp_bajo": "Quejas de propietarios por falta de reportes oportunos o comunicación fría en momentos críticos.", "interp_alto": "Comunicación empática y contención constante que genera confianza en las familias."}, {"id": 6, "criterio": "Criterio II: Dimensiones de Comunicación, Clientes y Reportes Institucionales", "enfoque": "6. Notificación en Salud Pública (SIVIGILA) y Enfermedades Zoonóticas", "pregunta_auto": "¿Diligencio oportunamente los formatos de notificación de enfermedades zoonóticas en la plataforma del SIVIGILA?", "pregunta_sup": "¿Asegura el reporte inmediato y formal de casos de potencial zoonótico ante el sistema de salud pública?", "interp_bajo": "Omisión o demora en el reporte de pacientes con patologías de notificación obligatoria.", "interp_alto": "Trazabilidad e informe inmediato a SIVIGILA en cumplimiento de la normatividad sanitaria."}, {"id": 7, "criterio": "Criterio II: Dimensiones de Comunicación, Clientes y Reportes Institucionales", "enfoque": "7. Supervisión y Verificación de Historias Clínicas (QVET / Helisa)", "pregunta_auto": "¿Verifico el diligenciamiento completo, actualización inmediata y confidencialidad de las historias clínicas en los sistemas asignados?", "pregunta_sup": "¿Audita que el registro médico en QVET/Helisa sea minucioso, oportuno y proteja los datos del paciente?", "interp_bajo": "Historias clínicas incompletas, vacíos en los registros de UCI o divulgación no autorizada de datos.", "interp_alto": "Rigor absoluto en el diligenciamiento, actualización y reserva de la historia clínica."}, {"id": 8, "criterio": "Criterio III: Dimensiones Operativas, Administración y Programación", "enfoque": "8. Programación de Horarios y Reporte de Nómina a Talento Humano", "pregunta_auto": "¿Elaboro semanalmente la malla de turnos del personal a cargo y reporto quincenalmente las novedades de nómina a Talento Humano?", "pregunta_sup": "¿Garantiza la programación equitativa de turnos y el envío puntual de novedades de nómina del equipo asistencial?", "interp_bajo": "Entrega extemporánea de turnos o errores repetitivos en el reporte de novedades de nómina.", "interp_alto": "Programación oportuna de turnos y reporte administrativo impecable a Talento Humano."}, {"id": 9, "criterio": "Criterio III: Dimensiones Operativas, Administración y Programación", "enfoque": "9. Evaluación de Pacientes y Coordinación con Médicos Tratantes", "pregunta_auto": "¿Evalúo diariamente a los internados (peso, constantes, consumo) e informo a los médicos tratantes para definir la conducta médica?", "pregunta_sup": "¿Asegura la evaluación periódica de parámetros fisiológicos y la articulación fluida con los médicos tratantes?", "interp_bajo": "Falta de registro en las evaluaciones periódicas o falta de reporte al médico tratante.", "interp_alto": "Evaluación exhaustiva y comunicación inmediata para la toma de decisiones clínicas."}, {"id": 10, "criterio": "Criterio III: Dimensiones Operativas, Administración y Programación", "enfoque": "10. Procedimientos de Apoyo (Inyectología, RX, Laboratorio)", "pregunta_auto": "¿Ejecuto procedimientos médicos y paraclínicos (radiografías, hematología, inyectología) cuando el personal encargado no está disponible?", "pregunta_sup": "¿Demuestra versatilidad técnica para suplir ausencias en la realización de exámenes y procedimientos de laboratorio o RX?", "interp_bajo": "Inacción o negación a realizar procedimientos diagnósticos o terapéuticos ante ausencias del personal.", "interp_alto": "Respuesta técnica ágil y solvente para mantener el flujo del servicio de hospital."}, {"id": 11, "criterio": "Criterio III: Dimensiones Operativas, Administración y Programación", "enfoque": "11. Coordinación de Imagenología, Sedación y Tablero de Hospital", "pregunta_auto": "¿Consigno pacientes en los tableros de imágenes y jaulas, y coordino la sedación requerida con el auxiliar de imágenes?", "pregunta_sup": "¿Supervisa la correcta identificación de jaulas, tableros de indicación vespertina y sedaciones en radiología/ecografía?", "interp_bajo": "Tableros desactualizados, jaulas sin identificar o fallas en el monitoreo durante sedaciones.", "interp_alto": "Control visual impecable de procesos e inventario de pacientes en sala."}, {"id": 12, "criterio": "Criterio III: Dimensiones Operativas, Administración y Programación", "enfoque": "12. Gestión de Medicamentos Especiales con Pet Center", "pregunta_auto": "¿Gestiono con el Pet Center los concentrados y medicamentos especiales no disponibles en farmacia, registrando su salida interna?", "pregunta_sup": "¿Garantiza el abastecimiento de dietas e insumos especiales velando por el registro en el control interno?", "interp_bajo": "Desabastecimiento de alimentos terapéuticos o retiro de insumos sin registro en el control interno.", "interp_alto": "Abastecimiento continuo y trazabilidad estricta de salidas del Pet Center."}, {"id": 13, "criterio": "Criterio IV: Dimensiones de Gobernanza, Gestión Presupuestal y Proveedores", "enfoque": "13. Aprobación de Decisiones por el Jefe Inmediato", "pregunta_auto": "¿Someto a la aprobación explícita de mi jefe inmediato todas las decisiones operativas y administrativas del área?", "pregunta_sup": "¿Asegura la alineación con la jefatura respetando la cadena de mando antes de ejecutar decisiones trascendentes?", "interp_bajo": "Toma de decisiones autonómicas que afectan procesos sin contar con la autorización del superior.", "interp_alto": "Respeto absoluto a los niveles de autoridad y comunicación transparente con la coordinación."}, {"id": 14, "criterio": "Criterio IV: Dimensiones de Gobernanza, Gestión Presupuestal y Proveedores", "enfoque": "14. Manejo del Presupuesto de Hospital y UCI", "pregunta_auto": "¿Administro responsablemente el presupuesto asignado al centro de costos de Hospital y UCI cuidando la eficiencia del gasto?", "pregunta_sup": "¿Demuestra disciplina presupuestal en el manejo de insumos, horas extras y recursos del área?", "interp_bajo": "Sobrecostos injustificados o falta de control en el consumo de insumos de hospitalización.", "interp_alto": "Ejecución presupuestal óptima y uso racional de los recursos de la clínica."}, {"id": 15, "criterio": "Criterio IV: Dimensiones de Gobernanza, Gestión Presupuestal y Proveedores", "enfoque": "15. Gestión de Proveedores de Equipos e Insumos Médicos", "pregunta_auto": "¿Coordino con los proveedores el suministro continuo de insumos y mantenimiento de equipos médicos de alta calidad?", "pregunta_sup": "¿Asegura relaciones efectivas con proveedores para mantener la dotación técnica de UCI sin interrupciones?", "interp_bajo": "Desatención a mantenimientos preventivos de equipos o faltantes de insumos por mala gestión de proveedores.", "interp_alto": "Articulación eficiente con proveedores garantizando insumos de alta calidad."}, {"id": 16, "criterio": "Criterio IV: Dimensiones de Gobernanza, Gestión Presupuestal y Proveedores", "enfoque": "16. Participación en Comité Médico y Liderazgo de Reunión de Área", "pregunta_auto": "¿Asisto al Comité Médico quincenal y lideró mensualmente las reuniones del área de UCI y Hospital?", "pregunta_sup": "¿Cumple con su presencia en el Comité Médico y lidera con efectividad las reuniones mensuales de su equipo?", "interp_bajo": "Ausentismo en reuniones estratégicas o cancelación de los encuentros mensuales del área.", "interp_alto": "Liderazgo activo en comités y reuniones de seguimiento operacional."}, {"id": 17, "criterio": "Criterio V: Dimensiones de Bioseguridad, SST y Competencias Organizacionales", "enfoque": "17. Supervisión de Bioseguridad, EPP y Prevención en SST", "pregunta_auto": "¿Utilizo y exijo al personal el uso constante de EPP, garantizando el cumplimiento de las normas de SST en el área?", "pregunta_sup": "¿Verifica y promueve un ambiente seguro exigiendo el uso de EPP y bioseguridad en el manejo de pacientes críticos?", "interp_bajo": "Flexibilidad o descuido en el uso de EPP al manipular fluidos o pacientes infectocontagiosos.", "interp_alto": "Cultura preventiva alta y bioseguridad intachable en todas las labores de UCI."}, {"id": 18, "criterio": "Criterio V: Dimensiones de Bioseguridad, SST y Competencias Organizacionales", "enfoque": "18. Reporte e Investigación de Incidentes (SISOMA) y Residuos", "pregunta_auto": "¿Reporto e investigo incidentes o actos inseguros, y garantizo la adecuada segregación de residuos biológicos/sólidos?", "pregunta_sup": "¿Participa activamente en la investigación de accidentes laborales y supervisa la gestión ambiental de desechos?", "interp_bajo": "Ocultamiento de accidentes/casi-accidentes o clasificación errónea de residuos biopatológicos.", "interp_alto": "Liderazgo proactivo en el programa SISOMA y gestión impecable de residuos hospitalarios."}, {"id": 19, "criterio": "Criterio V: Dimensiones de Bioseguridad, SST y Competencias Organizacionales", "enfoque": "19. Calidad de Trabajo, Soluciones Prácticas y Mejoramiento Continuo", "pregunta_auto": "¿Diseño e implemento mecanismos de control que me permitan elevar la calidad técnica del servicio y promover la mejora continua?", "pregunta_sup": "¿Aplica controles de calidad en la atención crítica e impulsa iniciativas de mejora en los procesos hospitalarios?", "interp_bajo": "Conformismo operativo con fallas recurrentes en el seguimiento de pacientes críticos.", "interp_alto": "Innovación práctica y compromiso constante con elevar la calidad de atención en UCI."}, {"id": 20, "criterio": "Criterio V: Dimensiones de Bioseguridad, SST y Competencias Organizacionales", "enfoque": "20. Compromiso, Colaboración Interdepartamental e Integridad", "pregunta_auto": "¿Asumo los objetivos organizacionales como propios, fomento la colaboración interdepartamental y actúo con absoluta ética?", "pregunta_sup": "¿Demuestra alto sentido de pertenencia, capacidad para trabajar con otras áreas y conducta ética transparente?", "interp_bajo": "Actitud aislada frente a otras áreas o falta de franqueza al admitir errores de gestión.", "interp_alto": "Integridad intachable, alto compromiso con la empresa y excelente colaboración con el equipo de salud."}];
+
+        let filteredData = [...employeesData];
+        let chartNivelesInstance = null;
+        let chartCriteriosInstance = null;
+        let chartSedesInstance = null;
+        let chartBrechasInstance = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateFilters();
+            updateDashboard();
+        });
+
+        function populateFilters() {
+            const areas = [...new Set(employeesData.map(e => e.area))];
+            const sedes = [...new Set(employeesData.map(e => e.sede))];
+            const niveles = [...new Set(employeesData.map(e => e.nivel))];
+
+            const areaSelect = document.getElementById('filter-area');
+            areas.forEach(a => {
+                areaSelect.innerHTML += `<option value="${a}">${a}</option>`;
+            });
+
+            const sedeSelect = document.getElementById('filter-sede');
+            sedes.forEach(s => {
+                sedeSelect.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+
+            const nivelSelect = document.getElementById('filter-nivel');
+            niveles.forEach(n => {
+                nivelSelect.innerHTML += `<option value="${n}">${n}</option>`;
+            });
+        }
+
+        function filterData() {
+            const area = document.getElementById('filter-area').value;
+            const sede = document.getElementById('filter-sede').value;
+            const nivel = document.getElementById('filter-nivel').value;
+            const search = document.getElementById('search-input').value.toLowerCase();
+
+            filteredData = employeesData.filter(e => {
+                return (area === "" || e.area === area) &&
+                       (sede === "" || e.sede === sede) &&
+                       (nivel === "" || e.nivel === nivel) &&
+                       (e.nombre.toLowerCase().includes(search) || e.cargo.toLowerCase().includes(search));
+            });
+
+            updateDashboard();
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-area').value = "";
+            document.getElementById('filter-sede').value = "";
+            document.getElementById('filter-nivel').value = "";
+            document.getElementById('search-input').value = "";
+            filteredData = [...employeesData];
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            updateTable();
+            updateCharts();
+        }
+
+        function updateKPIs() {
+            const total = filteredData.length;
+            document.getElementById('total-evaluados').textContent = total;
+            document.getElementById('count-shown').textContent = total;
+            document.getElementById('count-total').textContent = employeesData.length;
+
+            if (total === 0) {
+                document.getElementById('kpi-promedio').textContent = "0.0";
+                document.getElementById('kpi-criticos').textContent = "0";
+                document.getElementById('kpi-altos').textContent = "0";
+                document.getElementById('kpi-brecha').textContent = "0.0";
+                return;
+            }
+
+            const avgSup = (filteredData.reduce((acc, e) => acc + e.promedio_sup, 0) / total).toFixed(1);
+            const criticos = filteredData.filter(e => e.promedio_sup <= 74).length;
+            const altos = filteredData.filter(e => e.promedio_sup >= 75).length;
+            const avgBrecha = (filteredData.reduce((acc, e) => acc + e.brecha, 0) / total).toFixed(1);
+
+            document.getElementById('kpi-promedio').textContent = avgSup;
+            document.getElementById('kpi-criticos').textContent = criticos;
+            document.getElementById('kpi-altos').textContent = altos;
+            document.getElementById('kpi-brecha').textContent = avgBrecha;
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = "";
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-400">No se encontraron registros coincidentes.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach(e => {
+                let badgeColor = "bg-gray-100 text-gray-800";
+                if (e.promedio_sup <= 50) badgeColor = "bg-red-100 text-red-800 font-semibold";
+                else if (e.promedio_sup <= 74) badgeColor = "bg-amber-100 text-amber-800 font-semibold";
+                else if (e.promedio_sup <= 89) badgeColor = "bg-blue-100 text-blue-800 font-semibold";
+                else badgeColor = "bg-emerald-100 text-emerald-800 font-semibold";
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-100">
+                        <td class="py-3 px-4 font-semibold text-primary">${e.nombre}</td>
+                        <td class="py-3 px-4 text-gray-600">${e.cargo}</td>
+                        <td class="py-3 px-4 text-gray-600">${e.area}</td>
+                        <td class="py-3 px-4 text-gray-600 font-medium">${e.sede}</td>
+                        <td class="py-3 px-4 text-center font-bold text-gray-700">${e.total_auto}</td>
+                        <td class="py-3 px-4 text-center font-bold text-primary">${e.total_sup}</td>
+                        <td class="py-3 px-4 text-center font-semibold ${e.brecha > 10 ? 'text-danger' : 'text-gray-600'}">${e.brecha > 0 ? '+' + e.brecha : e.brecha}</td>
+                        <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-xs ${badgeColor}">${e.nivel}</span></td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="openModal(${e.id})" class="bg-primary hover:bg-blue-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow">
+                                <i class="fa-solid fa-eye mr-1"></i> Ver Detalle
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateCharts() {
+            const nivelesCount = {};
+            filteredData.forEach(e => {
+                nivelesCount[e.nivel] = (nivelesCount[e.nivel] || 0) + 1;
+            });
+
+            const ctxNiveles = document.getElementById('chartNiveles').getContext('2d');
+            if (chartNivelesInstance) chartNivelesInstance.destroy();
+
+            chartNivelesInstance = new Chart(ctxNiveles, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(nivelesCount),
+                    datasets: [{
+                        data: Object.values(nivelesCount),
+                        backgroundColor: ['#CA102E', '#A2A2A2', '#012169', '#10B981'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+
+            let avgAutoQ = new Array(20).fill(0);
+            let avgSupQ = new Array(20).fill(0);
+            if (filteredData.length > 0) {
+                filteredData.forEach(e => {
+                    for(let i=0; i<20; i++) {
+                        avgAutoQ[i] += e.scores_auto[i];
+                        avgSupQ[i] += e.scores_sup[i];
+                    }
+                });
+                avgAutoQ = avgAutoQ.map(v => (v / filteredData.length).toFixed(1));
+                avgSupQ = avgSupQ.map(v => (v / filteredData.length).toFixed(1));
+            }
+
+            const ctxCriterios = document.getElementById('chartCriterios').getContext('2d');
+            if (chartCriteriosInstance) chartCriteriosInstance.destroy();
+
+            chartCriteriosInstance = new Chart(ctxCriterios, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 20}, (_, i) => 'P' + (i + 1)),
+                    datasets: [
+                        {
+                            label: 'Autoevaluación',
+                            data: avgAutoQ,
+                            backgroundColor: '#A2A2A2',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Supervisor',
+                            data: avgSupQ,
+                            backgroundColor: '#012169',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 5 }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+
+            const sedesMap = {};
+            filteredData.forEach(e => {
+                if (!sedesMap[e.sede]) sedesMap[e.sede] = { sum: 0, count: 0 };
+                sedesMap[e.sede].sum += e.total_sup;
+                sedesMap[e.sede].count += 1;
+            });
+
+            const sedesLabels = Object.keys(sedesMap);
+            const sedesAvgs = sedesLabels.map(s => (sedesMap[s].sum / sedesMap[s].count).toFixed(1));
+
+            const ctxSedes = document.getElementById('chartSedes').getContext('2d');
+            if (chartSedesInstance) chartSedesInstance.destroy();
+
+            chartSedesInstance = new Chart(ctxSedes, {
+                type: 'bar',
+                data: {
+                    labels: sedesLabels,
+                    datasets: [{
+                        label: 'Puntaje Promedio Supervisor',
+                        data: sedesAvgs,
+                        backgroundColor: '#012169',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            const brechaRanges = { 'Subestima (<-10)': 0, 'Alineado (-10 a 10)': 0, 'Sobreestima (>10)': 0 };
+            filteredData.forEach(e => {
+                if (e.brecha < -10) brechaRanges['Subestima (<-10)']++;
+                else if (e.brecha <= 10) brechaRanges['Alineado (-10 a 10)']++;
+                else brechaRanges['Sobreestima (>10)']++;
+            });
+
+            const ctxBrechas = document.getElementById('chartBrechas').getContext('2d');
+            if (chartBrechasInstance) chartBrechasInstance.destroy();
+
+            chartBrechasInstance = new Chart(ctxBrechas, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(brechaRanges),
+                    datasets: [{
+                        label: 'Número de Colaboradores',
+                        data: Object.values(brechaRanges),
+                        backgroundColor: ['#A2A2A2', '#012169', '#CA102E'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function openModal(id) {
+            const emp = employeesData.find(e => e.id === id);
+            if (!emp) return;
+
+            document.getElementById('modal-nombre').textContent = emp.nombre;
+            document.getElementById('modal-cargo-area').textContent = `${emp.cargo} | Área: ${emp.area} | Sede: ${emp.sede}`;
+            document.getElementById('modal-score-auto').textContent = emp.total_auto;
+            document.getElementById('modal-score-sup').textContent = emp.total_sup;
+            document.getElementById('modal-brecha').textContent = emp.brecha > 0 ? '+' + emp.brecha : emp.brecha;
+
+            const badge = document.getElementById('modal-badge-nivel');
+            badge.textContent = emp.nivel;
+            if (emp.promedio_sup <= 50) badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-800";
+            else if (emp.promedio_sup <= 74) badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-100 text-amber-800";
+            else if (emp.promedio_sup <= 89) badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-blue-100 text-blue-800";
+            else badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800";
+
+            let diag = "";
+            if (emp.promedio_sup <= 50) {
+                diag = "Rendimiento por debajo de los estándares del área crítica. Fallas en la supervisión de pacientes internados en UCI, actualización de protocolos deficiente o mal manejo de equipos. Se requiere Plan de Mejora Intensivo a 30 días con auditoría clínica y operativa semanal y re-capacitación obligatoria en manejo de paciente crítico.";
+            } else if (emp.promedio_sup <= 74) {
+                diag = "Cumple la operación cotidiana pero presenta brechas de coordinación. Oportunidades de mejora en la oportunidad del envío de turnos, comunicación periódica con propietarios o análisis de datos de gestión. Requiere Plan de Acción a 60 días y refuerzo en habilidades de liderazgo.";
+            } else if (emp.promedio_sup <= 89) {
+                diag = "Desempeño técnico, administrativo y clínico sólido. Monitoreo efectivo en UCI, protocolización oportuna, adecuado manejo de equipos y cumplimiento estricto de bioseguridad. Mantenimiento y desarrollo con retroalimentación positiva y participación en comisiones de estandarización.";
+            } else {
+                diag = "Referente de excelencia en gestión de cuidados intensivos. Calidad técnica avanzada en medicina crítica, liderazgo inspirador, cero margen de error en registros e innovación en protocolos. Reconocimiento formal y proyección estratégica hacia alta dirección médica.";
+            }
+
+            if (emp.brecha >= 15) {
+                diag += " ⚠️ Alerta de Brecha (+15 o más): Refleja sobreestimación del colaborador sobre su liderazgo o falta de conciencia ante errores. Requiere sesión de retroalimentación con revisión objetiva de historias clínicas.";
+            } else if (emp.brecha <= -15) {
+                diag += " ⚠️ Alerta de Brecha (-15 o menos): Señala alta autoexigencia o subestimación por parte del colaborador. Oportunidad para reforzar su confianza y potenciar su autonomía.";
+            }
+
+            document.getElementById('modal-diagnostico').textContent = diag;
+
+            const qBody = document.getElementById('modal-questions-body');
+            qBody.innerHTML = "";
+            questionsData.forEach((q, idx) => {
+                const sSup = emp.scores_sup[idx];
+                let interp = sSup <= 2 ? q.interp_bajo : q.interp_alto;
+                qBody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-2.5 font-bold text-primary">P${q.id}</td>
+                        <td class="p-2.5"><strong>${q.criterio.split(':')[0]}</strong>: ${q.enfoque}</td>
+                        <td class="p-2.5 text-center font-bold text-gray-600">${emp.scores_auto[idx]}</td>
+                        <td class="p-2.5 text-center font-bold text-primary">${sSup}</td>
+                        <td class="p-2.5 text-gray-600">${interp}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('modal-detalle').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-detalle').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
